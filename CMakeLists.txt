@@ -17,7 +17,8 @@ add_executable(pico_plant
 
 target_link_libraries(pico_plant PRIVATE
         pico_multicore
-        pico_stdlib)
+        pico_stdlib
+        hardware_adc)
 
 pico_enable_stdio_usb(pico_plant 1)
 pico_enable_stdio_uart(pico_plant 0)
