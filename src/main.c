@@ -37,8 +37,8 @@ int main(void)
         const float adc1 = conversion_factor * (float)adc_read();
 
         gpio_put(LED_PIN, 1);
-        gpio_put(LED_PIN_R1, adc0 > 0.90f ? 1 : 0);
-        gpio_put(LED_PIN_R2, adc1 > 0.90f ? 1 : 0);
+        gpio_put(LED_PIN_R1, adc0 > 0.94f ? 1 : 0);
+        gpio_put(LED_PIN_R2, adc1 > 0.94f ? 1 : 0);
         sleep_ms(500);
 
         gpio_put(LED_PIN, 0);
