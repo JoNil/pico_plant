@@ -34,8 +34,7 @@ int main(void)
     pwm_config_set_wrap(&cfg, 999);
     pwm_config_set_clkdiv(&cfg, 125);
     pwm_init(motor_pwm, &cfg, false);
-
-    pwm_set_chan_level(motor_pwm, motor_chn, 500);
+    pwm_set_chan_level(motor_pwm, motor_chn, 0);
     pwm_set_enabled(motor_pwm, true);
 
     for (;;)
@@ -44,7 +43,8 @@ int main(void)
         const float adc0 = CONVERSION_FACTOR * (float)adc_read();
 
         gpio_put(LED_PIN, 1);
-        gpio_put(LED_PIN_R1, adc0 > 0.95f ? 1 : 0);
+        gpio_put(LED_PIN_R1, adc0 > 0.90f ? 1 : 0);
+        pwm_set_chan_level(motor_pwm, motor_chn, adc0 > 0.90f ? 1000 : 0);
         sleep_ms(500);
 
         gpio_put(LED_PIN, 0);
