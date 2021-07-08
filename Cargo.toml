@@ -7,3 +7,14 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+cortex-m = "0.7"
+cortex-m-rt = "0.6.13"
+embedded-hal = { version = "0.2", features=["unproven"] }
+panic-halt = "0.2.0"
+rp2040-boot2 = { git = "https://github.com/JoNil/rp2040-boot2-rs.git", branch="main" }
+rp2040-hal = { path = "../rp-hal/rp2040-hal"}
+
+[profile.release]
+codegen-units = 1 # better optimizations
+debug = true # symbols are nice and they don't increase the size on Flash
+lto = true # better optimizations
