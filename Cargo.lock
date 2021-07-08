@@ -170,6 +170,7 @@ dependencies = [
  "cortex-m",
  "cortex-m-rt",
  "embedded-hal",
+ "embedded-time",
  "panic-halt",
  "rp2040-boot2",
  "rp2040-hal",
