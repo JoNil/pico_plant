@@ -4,7 +4,7 @@
 use cortex_m_rt::entry;
 use embedded_hal::digital::v2::OutputPin;
 use embedded_time::rate::Extensions;
-use hal::{i2c::I2C, pac, sio::Sio};
+use hal::{gpio::FunctionI2C, i2c::I2C, pac, sio::Sio};
 use panic_halt as _;
 use rp2040_hal as hal;
 
@@ -25,13 +25,10 @@ fn main() -> ! {
     );
     let mut led_pin = pins.gpio25.into_push_pull_output();
 
-    let mut i2c = I2C::i2c1(
-        pac.I2C1,
-        pins.gpio18,
-        pins.gpio19,
-        400.kHz(),
-        &mut pac.RESETS,
-    );
+    let sda_pin = pins.gpio18.into_mode::<FunctionI2C>();
+    let scl_pin = pins.gpio19.into_mode::<FunctionI2C>();
+
+    let mut i2c = I2C::i2c1(pac.I2C1, sda_pin, scl_pin, 400.kHz(), &mut pac.RESETS);
 
     loop {
         led_pin.set_high().unwrap();
