@@ -12,6 +12,9 @@ use rp2040_hal as hal;
 #[used]
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
 
+// https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf
+// https://github.com/bitbank2/Pi_Pico_C_Projects/blob/master/ss_oled/ss_oled.c
+
 #[entry]
 fn main() -> ! {
     let mut pac = pac::Peripherals::take().unwrap();
