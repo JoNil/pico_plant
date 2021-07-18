@@ -2,11 +2,21 @@
 #![no_main]
 
 use cortex_m_rt::entry;
+use embedded_graphics::{
+    image::{Image, ImageRaw},
+    pixelcolor::BinaryColor,
+    prelude::Point,
+    Drawable,
+};
 use embedded_hal::digital::v2::OutputPin;
 use embedded_time::rate::Extensions;
 use hal::{gpio::FunctionI2C, i2c::I2C, pac, sio::Sio};
 use panic_halt as _;
 use rp2040_hal as hal;
+use ssd1306::{
+    mode::DisplayConfig, rotation::DisplayRotation, size::DisplaySize128x32, I2CDisplayInterface,
+    Ssd1306,
+};
 
 #[link_section = ".boot2"]
 #[used]
@@ -28,10 +38,26 @@ fn main() -> ! {
     );
     let mut led_pin = pins.gpio25.into_push_pull_output();
 
-    let sda_pin = pins.gpio18.into_mode::<FunctionI2C>();
+    let sda_pin = pins.gpio14.into_mode::<FunctionI2C>();
     let scl_pin = pins.gpio19.into_mode::<FunctionI2C>();
 
-    let mut i2c = I2C::i2c1(pac.I2C1, sda_pin, scl_pin, 400.kHz(), &mut pac.RESETS);
+    let i2c = I2C::i2c1(pac.I2C1, sda_pin, scl_pin, 400.kHz(), &mut pac.RESETS);
+
+    let interface = I2CDisplayInterface::new(i2c);
+    let mut display = Ssd1306::new(interface, DisplaySize128x32, DisplayRotation::Rotate0)
+        .into_buffered_graphics_mode();
+
+    display.init().unwrap();
+
+    led_pin.set_high().unwrap();
+
+    let raw: ImageRaw<BinaryColor> = ImageRaw::new(include_bytes!("./rust.raw"), 64);
+
+    let im = Image::new(&raw, Point::new(32, 0));
+
+    im.draw(&mut display).unwrap();
+
+    display.flush().unwrap();
 
     loop {
         led_pin.set_high().unwrap();
