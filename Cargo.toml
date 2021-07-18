@@ -10,7 +10,10 @@ cortex-m-rt = "0.6.13"
 embedded-graphics = "0.7"
 embedded-hal = { version = "0.2", features=["unproven"] }
 embedded-time = "0.10"
+heapless = { version = "0.7", features = ["ufmt-impl"] }
 panic-halt = "0.2.0"
-rp2040-boot2 = { git = "https://github.com/JoNil/rp2040-boot2-rs.git", branch="main" }
+rp2040-boot2 = { git = "https://github.com/JoNil/rp2040-boot2-rs.git", branch = "main" }
 rp2040-hal = { path = "../rp-hal/rp2040-hal"}
 ssd1306 = "0.7"
+ufmt = "0.1.0"
+ufmt_float = "0.1"
