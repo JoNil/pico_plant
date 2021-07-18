@@ -5,8 +5,7 @@ use cortex_m_rt::entry;
 use embedded_graphics::{
     mono_font::{ascii::FONT_6X10, MonoTextStyle},
     pixelcolor::BinaryColor,
-    prelude::{Point, Primitive},
-    primitives::{Line, PrimitiveStyleBuilder},
+    prelude::Point,
     text::{Alignment, Text},
     Drawable,
 };
@@ -110,41 +109,33 @@ fn main() -> ! {
     display.clear();
     display.flush().unwrap();
 
-    let style = PrimitiveStyleBuilder::new()
-        .stroke_width(1)
-        .stroke_color(BinaryColor::On)
-        .fill_color(BinaryColor::On)
-        .build();
-
     let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
 
-    let data = [
-        Point::new(0, 16),
-        Point::new(16, 0),
-        Point::new(32, 10),
-        Point::new(48, 12),
-        Point::new(64, 32),
-        Point::new(80, 16),
-        Point::new(96, 10),
-        Point::new(112, 30),
-        Point::new(128, 0),
-    ];
+    let mut data: [f32; 128] = [0.0; 128];
+
+    let mut measure_cycle = 0;
 
     loop {
         led_pin.set_low().unwrap();
 
         display.clear();
 
-        for (p1, p2) in data.iter().zip(data.iter().skip(1)) {
-            Line::new(*p1, *p2)
-                .into_styled(style)
-                .draw(&mut display)
-                .unwrap();
-        }
-
         let temp: u16 = temp_sens.read(&mut temp_sens_channel).unwrap();
         let temp = temp as f32 * 3.3 / 4096.0;
         let temp = 27.0 - (temp - 0.706) / 0.001721;
+
+        measure_cycle += 1;
+
+        if measure_cycle > 100 {
+            data.rotate_left(1);
+            *data.last_mut().unwrap() = temp;
+            measure_cycle = 0;
+        }
+
+        for (x, t) in data.iter().enumerate() {
+            let y = (32.0 * t / 30.0) as u32;
+            display.set_pixel(x as u32, 32 - y, true);
+        }
 
         let mut text = String::<16>::new();
         uwrite!(&mut text, "T: {}", uFmt_f32::One(temp as f32)).unwrap();
