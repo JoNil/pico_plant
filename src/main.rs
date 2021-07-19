@@ -1,15 +1,22 @@
 #![no_std]
 #![no_main]
 
+use core::str;
 use cortex_m_rt::entry;
 use embedded_graphics::{
     mono_font::{ascii::FONT_6X10, MonoTextStyle},
     pixelcolor::BinaryColor,
-    prelude::Point,
+    prelude::{Point, Size},
+    primitives::Rectangle,
     text::{Alignment, Text},
     Drawable,
 };
 use embedded_hal::{adc::OneShot, digital::v2::OutputPin};
+use embedded_text::{
+    alignment::HorizontalAlignment,
+    style::{HeightMode, TextBoxStyleBuilder},
+    TextBox,
+};
 use embedded_time::rate::Extensions;
 use hal::{
     adc::Adc,
@@ -26,7 +33,7 @@ use hal::{
     xosc::setup_xosc_blocking,
 };
 use heapless::String;
-use panic_halt as _;
+use panic_persist::{self as _, get_panic_message_bytes};
 use rp2040_hal as hal;
 use ssd1306::{
     mode::DisplayConfig, rotation::DisplayRotation, size::DisplaySize128x32, I2CDisplayInterface,
@@ -79,10 +86,6 @@ fn main() -> ! {
         sio.gpio_bank0,
         &mut pac.RESETS,
     );
-    let mut led_pin = pins.gpio25.into_push_pull_output();
-
-    let mut temp_sens = Adc::new(pac.ADC, &mut pac.RESETS);
-    let mut temp_sens_channel = temp_sens.enable_temp_sensor();
 
     let sda_pin = pins.gpio14.into_mode::<FunctionI2C>();
     let scl_pin = pins.gpio19.into_mode::<FunctionI2C>();
@@ -96,14 +99,40 @@ fn main() -> ! {
         SYS_HZ.Hz(),
     );
 
-    led_pin.set_high().unwrap();
-
     let mut display = Ssd1306::new(
         I2CDisplayInterface::new(i2c),
         DisplaySize128x32,
         DisplayRotation::Rotate0,
     )
     .into_buffered_graphics_mode();
+
+    if let Some(msg) = get_panic_message_bytes() {
+        let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
+        let textbox_style = TextBoxStyleBuilder::new()
+            .height_mode(HeightMode::FitToText)
+            .alignment(HorizontalAlignment::Left)
+            .build();
+
+        let bounds = Rectangle::new(Point::zero(), Size::new(128, 32));
+
+        display.clear();
+        TextBox::with_textbox_style(
+            unsafe { str::from_utf8_unchecked(msg) },
+            bounds,
+            character_style,
+            textbox_style,
+        )
+        .draw(&mut display)
+        .unwrap();
+        display.flush().unwrap();
+
+        loop {}
+    }
+
+    let mut led_pin = pins.gpio25.into_push_pull_output();
+
+    let mut temp_sens = Adc::new(pac.ADC, &mut pac.RESETS);
+    let mut temp_sens_channel = temp_sens.enable_temp_sensor();
 
     display.init().unwrap();
     display.clear();
