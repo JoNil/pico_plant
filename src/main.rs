@@ -126,6 +126,7 @@ fn main() -> ! {
         .unwrap();
         display.flush().unwrap();
 
+        #[allow(clippy::empty_loop)]
         loop {}
     }
 
