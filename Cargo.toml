@@ -18,6 +18,11 @@ ssd1306 = "0.7"
 ufmt = "0.1.0"
 ufmt_float = "0.1"
 
+[[bin]]
+name = "pico_plant"
+test = false
+bench = false
+
 [profile.release]
 opt-level = "z"
 codegen-units = 1
