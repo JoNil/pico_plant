@@ -10,7 +10,7 @@ cortex-m-rt = "0.6.13"
 embedded-graphics = "0.7"
 embedded-hal = { version = "0.2", features=["unproven"] }
 embedded-text = { git = "https://github.com/embedded-graphics/embedded-text.git" }
-embedded-time = "0.10"
+embedded-time = "0.12"
 heapless = { version = "0.7", features = ["ufmt-impl"] }
 panic-persist = "0.2"
 rp2040-boot2 = { git = "https://github.com/JoNil/rp2040-boot2-rs.git", branch = "main" }
