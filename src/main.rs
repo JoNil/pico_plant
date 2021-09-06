@@ -18,7 +18,19 @@ use embedded_text::{
     TextBox,
 };
 use embedded_time::rate::Extensions;
-use hal::{adc::Adc, gpio::FunctionI2C, i2c::I2C, Rp2040};
+use hal::{
+    adc::Adc,
+    clocks::ClocksManager,
+    gpio::{FunctionI2C, Pins},
+    i2c::I2C,
+    pac,
+    pll::{
+        common_configs::{PLL_SYS_125MHZ, PLL_USB_48MHZ},
+        setup_pll_blocking,
+    },
+    sio::Sio,
+    xosc::setup_xosc_blocking,
+};
 use heapless::String;
 use panic_persist::{self as _, get_panic_message_bytes};
 use rp2040_hal as hal;
@@ -33,21 +45,56 @@ use ufmt_float::uFmt_f32;
 #[used]
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
 
+const XOSC_HZ: u32 = 12_000_000_u32;
 const SYS_HZ: u32 = 125_000_000_u32;
 
 #[entry]
 fn main() -> ! {
-    let mut rp = Rp2040::take().unwrap();
+    let mut pac = pac::Peripherals::take().unwrap();
 
-    let sda_pin = rp.pins.gpio14.into_mode::<FunctionI2C>();
-    let scl_pin = rp.pins.gpio19.into_mode::<FunctionI2C>();
+    let mut clocks = ClocksManager::new(pac.CLOCKS);
+
+    let xosc = setup_xosc_blocking(pac.XOSC, XOSC_HZ.Hz()).ok().unwrap();
+
+    let pll_sys = setup_pll_blocking(
+        pac.PLL_SYS,
+        XOSC_HZ.Hz().into(),
+        PLL_SYS_125MHZ,
+        &mut clocks,
+        &mut pac.RESETS,
+    )
+    .ok()
+    .unwrap();
+
+    let pll_usb = setup_pll_blocking(
+        pac.PLL_USB,
+        XOSC_HZ.Hz().into(),
+        PLL_USB_48MHZ,
+        &mut clocks,
+        &mut pac.RESETS,
+    )
+    .ok()
+    .unwrap();
+
+    clocks.init_default(&xosc, &pll_sys, &pll_usb).ok().unwrap();
+
+    let sio = Sio::new(pac.SIO);
+    let pins = Pins::new(
+        pac.IO_BANK0,
+        pac.PADS_BANK0,
+        sio.gpio_bank0,
+        &mut pac.RESETS,
+    );
+
+    let sda_pin = pins.gpio14.into_mode::<FunctionI2C>();
+    let scl_pin = pins.gpio19.into_mode::<FunctionI2C>();
 
     let i2c = I2C::i2c1(
-        rp.pac.I2C1,
+        pac.I2C1,
         sda_pin,
         scl_pin,
         400.kHz(),
-        &mut rp.pac.RESETS,
+        &mut pac.RESETS,
         SYS_HZ.Hz(),
     );
 
@@ -82,9 +129,9 @@ fn main() -> ! {
         loop {}
     }
 
-    let mut led_pin = rp.pins.gpio25.into_push_pull_output();
+    let mut led_pin = pins.gpio25.into_push_pull_output();
 
-    let mut temp_sens = Adc::new(rp.pac.ADC, &mut rp.pac.RESETS);
+    let mut temp_sens = Adc::new(pac.ADC, &mut pac.RESETS);
     let mut temp_sens_channel = temp_sens.enable_temp_sensor();
 
     display.init().unwrap();
