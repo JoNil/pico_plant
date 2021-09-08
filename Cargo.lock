@@ -188,8 +188,9 @@ dependencies = [
 
 [[package]]
 name = "embedded-text"
-version = "0.5.0-beta.4"
-source = "git+https://github.com/embedded-graphics/embedded-text.git#04855552d0b19132d4deaa6fd452e0c4db80cd61"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce4010b774f36bf6bf1497500dc8299c99c3775c83719dd1734b8b66b13f205c"
 dependencies = [
  "ansi-parser",
  "az",
