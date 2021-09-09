@@ -131,8 +131,11 @@ fn main() -> ! {
 
     let mut led_pin = pins.gpio25.into_push_pull_output();
 
-    let mut temp_sens = Adc::new(pac.ADC, &mut pac.RESETS);
-    let mut temp_sens_channel = temp_sens.enable_temp_sensor();
+    let mut adc = Adc::new(pac.ADC, &mut pac.RESETS);
+    let mut temp_sens_channel = adc.enable_temp_sensor();
+
+    let mut water_sensor_pin = pins.gpio27.into_floating_input();
+    let mut input_voltage_sensor_pin = pins.gpio26.into_floating_input();
 
     display.init().unwrap();
     display.clear();
@@ -149,29 +152,52 @@ fn main() -> ! {
 
         display.clear();
 
-        let temp: u16 = temp_sens.read(&mut temp_sens_channel).unwrap();
+        let temp: u16 = adc.read(&mut temp_sens_channel).unwrap();
         let temp = temp as f32 * 3.3 / 4096.0;
         let temp = 27.0 - (temp - 0.706) / 0.001721;
 
+        let voltage: u16 = adc.read(&mut input_voltage_sensor_pin).unwrap();
+        let voltage = voltage as f32 * 3.3 / 4096.0;
+
+        let water: u16 = adc.read(&mut water_sensor_pin).unwrap();
+        let water = f32::max(1.5 - water as f32 * 3.3 / 4096.0, 0.0);
+
         measure_cycle += 1;
 
-        if measure_cycle > 100 {
+        if measure_cycle > 5 {
             data.rotate_left(1);
-            *data.last_mut().unwrap() = temp;
+            *data.last_mut().unwrap() = water;
             measure_cycle = 0;
         }
 
         for (x, t) in data.iter().enumerate() {
-            let y = (32.0 * t / 30.0) as u32;
+            let y = (32.0 * t / 0.5) as u32;
             display.set_pixel(x as u32, 32 - y, true);
         }
 
-        let mut text = String::<16>::new();
-        uwrite!(&mut text, "T: {}", uFmt_f32::One(temp as f32)).unwrap();
+        {
+            let mut text = String::<48>::new();
+            uwrite!(&mut text, "T: {}", uFmt_f32::One(temp)).unwrap();
 
-        Text::with_alignment(&text, Point::new(0, 30), character_style, Alignment::Left)
-            .draw(&mut display)
+            Text::with_alignment(&text, Point::new(0, 10), character_style, Alignment::Left)
+                .draw(&mut display)
+                .unwrap();
+        }
+
+        {
+            let mut text = String::<48>::new();
+            uwrite!(
+                &mut text,
+                "W: {}, V: {}",
+                uFmt_f32::Three(water),
+                uFmt_f32::Three(voltage)
+            )
             .unwrap();
+
+            Text::with_alignment(&text, Point::new(0, 30), character_style, Alignment::Left)
+                .draw(&mut display)
+                .unwrap();
+        }
 
         led_pin.set_high().unwrap();
 

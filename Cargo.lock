@@ -154,6 +154,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "either"
+version = "1.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
+
+[[package]]
 name = "embedded-graphics"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -168,9 +174,9 @@ dependencies = [
 
 [[package]]
 name = "embedded-graphics-core"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e3902d8d4422aa9ac75556f8cfb2e02c8ba22eb3f1993aec8bc113e6299b2da"
+checksum = "b8b1239db5f3eeb7e33e35bd10bd014e7b2537b17e071f726a09351431337cfa"
 dependencies = [
  "az",
  "byteorder",
@@ -284,6 +290,15 @@ dependencies = [
  "hash32 0.2.1",
  "stable_deref_trait",
  "ufmt-write",
+]
+
+[[package]]
+name = "itertools"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69ddb889f9d0d08a67338271fa9b62996bc788c7796a5c18cf057420aaed5eaf"
+dependencies = [
+ "either",
 ]
 
 [[package]]
@@ -458,21 +473,22 @@ source = "git+https://github.com/JoNil/rp2040-boot2-rs.git?branch=main#cc9383dba
 [[package]]
 name = "rp2040-hal"
 version = "0.2.0"
-source = "git+https://github.com/rp-rs/rp-hal.git#9d2e18dc703678403abe2d33f5dd2b23532bb1e8"
 dependencies = [
  "cortex-m 0.7.3",
  "embedded-hal",
  "embedded-time",
+ "itertools",
  "nb 1.0.0",
  "paste",
  "rp2040-pac",
+ "usb-device",
+ "void",
 ]
 
 [[package]]
 name = "rp2040-pac"
 version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dab4841534bf3920646ee45ead026be6a4f490117e0b7e249e904a0b0325447c"
+source = "git+https://github.com/rp-rs/rp2040-pac?rev=0226d2c28e8dca03475d6783cbdf07f535859c23#0226d2c28e8dca03475d6783cbdf07f535859c23"
 dependencies = [
  "cortex-m 0.7.3",
  "vcell",
@@ -582,6 +598,12 @@ name = "unicode-xid"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ccb82d61f80a663efe1f787a51b16b5a51e3314d6ac365b08639f52387b33f3"
+
+[[package]]
+name = "usb-device"
+version = "0.2.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6be90410d4772074ea49525e2e753b65920b94b57eee21a6ef7b6a6fe6296245"
 
 [[package]]
 name = "vcell"
