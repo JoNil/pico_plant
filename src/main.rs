@@ -48,6 +48,10 @@ pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
 const XOSC_HZ: u32 = 12_000_000_u32;
 const SYS_HZ: u32 = 125_000_000_u32;
 
+fn lerp(val1: f32, val2: f32, amount: f32) -> f32 {
+    return val1 + (val2 - val1) * amount;
+}
+
 #[entry]
 fn main() -> ! {
     let mut pac = pac::Peripherals::take().unwrap();
@@ -147,6 +151,9 @@ fn main() -> ! {
 
     let mut measure_cycle = 0;
 
+    let mut average_voltage = 0.0;
+    let mut average_water = 0.0;
+
     loop {
         led_pin.set_low().unwrap();
 
@@ -157,16 +164,20 @@ fn main() -> ! {
         let temp = 27.0 - (temp - 0.706) / 0.001721;
 
         let voltage: u16 = adc.read(&mut input_voltage_sensor_pin).unwrap();
-        let voltage = voltage as f32 * 3.3 / 4096.0;
+        let voltage = voltage as f32 * 5.0 / 4096.0;
+
+        average_voltage = lerp(average_voltage, voltage, 0.05);
 
         let water: u16 = adc.read(&mut water_sensor_pin).unwrap();
-        let water = f32::max(1.5 - water as f32 * 3.3 / 4096.0, 0.0);
+        let water = f32::max(1.5 - ((5.0 - voltage) + water as f32 * 3.3 / 4096.0), 0.0);
+
+        average_water = lerp(average_water, water, 0.01);
 
         measure_cycle += 1;
 
         if measure_cycle > 5 {
             data.rotate_left(1);
-            *data.last_mut().unwrap() = water;
+            *data.last_mut().unwrap() = average_water;
             measure_cycle = 0;
         }
 
@@ -189,8 +200,8 @@ fn main() -> ! {
             uwrite!(
                 &mut text,
                 "W: {}, V: {}",
-                uFmt_f32::Three(water),
-                uFmt_f32::Three(voltage)
+                uFmt_f32::Three(average_water),
+                uFmt_f32::Three(average_voltage)
             )
             .unwrap();
 
