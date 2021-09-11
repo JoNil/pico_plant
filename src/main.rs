@@ -20,19 +20,13 @@ use embedded_text::{
 use embedded_time::rate::Extensions;
 use hal::{
     adc::Adc,
-    clocks::{init_clocks_and_plls, ClockSource, ClocksManager},
+    clocks::{init_clocks_and_plls, ClockSource},
     gpio::{FunctionI2C, Pins},
     i2c::I2C,
     pac,
-    pll::{
-        common_configs::{PLL_SYS_125MHZ, PLL_USB_48MHZ},
-        setup_pll_blocking,
-    },
     sio::Sio,
-    timer::Timer,
     usb::UsbBus,
     watchdog::Watchdog,
-    xosc::setup_xosc_blocking,
 };
 use heapless::String;
 use panic_persist::{self as _, get_panic_message_bytes};
