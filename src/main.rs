@@ -71,22 +71,6 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    let usb_bus = UsbBusAllocator::new(UsbBus::new(
-        pac.USBCTRL_REGS,
-        pac.USBCTRL_DPRAM,
-        clocks.usb_clock,
-        true,
-        &mut pac.RESETS,
-    ));
-    let mut serial = SerialPort::new(&usb_bus);
-    let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x16c0, 0x27dd))
-        .manufacturer("JoNil")
-        .product("Pico Plant")
-        .serial_number("1")
-        .max_packet_size_0(64)
-        .device_class(2) // from: https://www.usb.org/defined-class-codes
-        .build();
-
     let sio = Sio::new(pac.SIO);
     let pins = Pins::new(
         pac.IO_BANK0,
@@ -121,6 +105,24 @@ fn main() -> ! {
     } else {
         false
     };
+
+    let usb_bus = UsbBusAllocator::new(UsbBus::new(
+        pac.USBCTRL_REGS,
+        pac.USBCTRL_DPRAM,
+        clocks.usb_clock,
+        true,
+        &mut pac.RESETS,
+    ));
+    let mut serial = SerialPort::new(&usb_bus);
+    let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x16c0, 0x27dd))
+        .manufacturer("JoNil")
+        .product("Pico Plant")
+        .serial_number("1")
+        .max_packet_size_0(64)
+        .device_class(2) // from: https://www.usb.org/defined-class-codes
+        .build();
+
+    while usb_dev.poll(&mut [&mut serial]) {}
 
     if let Some(msg) = get_panic_message_bytes() {
         let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
@@ -168,7 +170,7 @@ fn main() -> ! {
     let mut average_water = 0.0;
 
     loop {
-        usb_dev.poll(&mut [&mut serial]);
+        while usb_dev.poll(&mut [&mut serial]) {}
 
         led_pin.set_low().unwrap();
 
