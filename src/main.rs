@@ -124,7 +124,7 @@ fn main() -> ! {
         USB_SERIAL = Some(SerialPort::new(USB_BUS.as_ref().unwrap()));
 
         USB_DEVICE = Some(
-            UsbDeviceBuilder::new(USB_BUS.as_ref().unwrap(), UsbVidPid(0x16c0, 0x27dd))
+            UsbDeviceBuilder::new(USB_BUS.as_ref().unwrap(), UsbVidPid(0x16c0, 0x047a))
                 .manufacturer("JoNil")
                 .product("Pico Plant")
                 .serial_number("1")
