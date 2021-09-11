@@ -106,6 +106,8 @@ fn main() -> ! {
         false
     };
 
+    let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
+
     let usb_bus = UsbBusAllocator::new(UsbBus::new(
         pac.USBCTRL_REGS,
         pac.USBCTRL_DPRAM,
@@ -125,7 +127,6 @@ fn main() -> ! {
     while usb_dev.poll(&mut [&mut serial]) {}
 
     if let Some(msg) = get_panic_message_bytes() {
-        let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
         let textbox_style = TextBoxStyleBuilder::new()
             .height_mode(HeightMode::FitToText)
             .alignment(HorizontalAlignment::Left)
@@ -159,8 +160,6 @@ fn main() -> ! {
 
     let mut water_sensor_pin = pins.gpio27.into_floating_input();
     let mut input_voltage_sensor_pin = pins.gpio26.into_floating_input();
-
-    let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
 
     let mut data: [f32; 128] = [0.0; 128];
 
