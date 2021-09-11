@@ -114,6 +114,14 @@ fn main() -> ! {
     )
     .into_buffered_graphics_mode();
 
+    let display_ok = if display.init().is_ok() {
+        display.clear();
+        display.flush().unwrap();
+        true
+    } else {
+        false
+    };
+
     if let Some(msg) = get_panic_message_bytes() {
         let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
         let textbox_style = TextBoxStyleBuilder::new()
@@ -123,19 +131,23 @@ fn main() -> ! {
 
         let bounds = Rectangle::new(Point::zero(), Size::new(128, 32));
 
+        let message = unsafe { str::from_utf8_unchecked(msg) };
+
         display.clear();
-        TextBox::with_textbox_style(
-            unsafe { str::from_utf8_unchecked(msg) },
-            bounds,
-            character_style,
-            textbox_style,
-        )
-        .draw(&mut display)
-        .unwrap();
-        display.flush().unwrap();
+        TextBox::with_textbox_style(message, bounds, character_style, textbox_style)
+            .draw(&mut display)
+            .unwrap();
+
+        if display_ok {
+            display.flush().unwrap();
+        }
+
+        serial.write(msg).ok();
 
         #[allow(clippy::empty_loop)]
-        loop {}
+        loop {
+            usb_dev.poll(&mut [&mut serial]);
+        }
     }
 
     let mut led_pin = pins.gpio25.into_push_pull_output();
@@ -145,14 +157,6 @@ fn main() -> ! {
 
     let mut water_sensor_pin = pins.gpio27.into_floating_input();
     let mut input_voltage_sensor_pin = pins.gpio26.into_floating_input();
-
-    let display_ok = if display.init().is_ok() {
-        display.clear();
-        display.flush().unwrap();
-        true
-    } else {
-        false
-    };
 
     let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
 
