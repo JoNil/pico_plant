@@ -23,7 +23,7 @@ use hal::{
     clocks::{init_clocks_and_plls, ClockSource},
     gpio::{FunctionI2C, Pins},
     i2c::I2C,
-    pac,
+    pac::{self, interrupt},
     sio::Sio,
     usb::UsbBus,
     watchdog::Watchdog,
@@ -39,7 +39,7 @@ use ufmt::uwrite;
 use ufmt_float::uFmt_f32;
 use usb_device::{
     class_prelude::UsbBusAllocator,
-    device::{UsbDeviceBuilder, UsbVidPid},
+    device::{UsbDevice, UsbDeviceBuilder, UsbVidPid},
 };
 use usbd_serial::SerialPort;
 
@@ -48,6 +48,10 @@ use usbd_serial::SerialPort;
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
 
 const XOSC_HZ: u32 = 12_000_000_u32;
+
+static mut USB_BUS: Option<UsbBusAllocator<UsbBus>> = None;
+static mut USB_DEVICE: Option<UsbDevice<UsbBus>> = None;
+static mut USB_SERIAL: Option<SerialPort<UsbBus>> = None;
 
 fn lerp(val1: f32, val2: f32, amount: f32) -> f32 {
     val1 + (val2 - val1) * amount
@@ -108,23 +112,46 @@ fn main() -> ! {
 
     let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
 
-    let usb_bus = UsbBusAllocator::new(UsbBus::new(
-        pac.USBCTRL_REGS,
-        pac.USBCTRL_DPRAM,
-        clocks.usb_clock,
-        true,
-        &mut pac.RESETS,
-    ));
-    let mut serial = SerialPort::new(&usb_bus);
-    let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x16c0, 0x27dd))
-        .manufacturer("JoNil")
-        .product("Pico Plant")
-        .serial_number("1")
-        .max_packet_size_0(64)
-        .device_class(2) // from: https://www.usb.org/defined-class-codes
-        .build();
+    unsafe {
+        USB_BUS = Some(UsbBusAllocator::new(UsbBus::new(
+            pac.USBCTRL_REGS,
+            pac.USBCTRL_DPRAM,
+            clocks.usb_clock,
+            true,
+            &mut pac.RESETS,
+        )));
 
-    while usb_dev.poll(&mut [&mut serial]) {}
+        USB_SERIAL = Some(SerialPort::new(USB_BUS.as_ref().unwrap()));
+
+        USB_DEVICE = Some(
+            UsbDeviceBuilder::new(USB_BUS.as_ref().unwrap(), UsbVidPid(0x16c0, 0x27dd))
+                .manufacturer("JoNil")
+                .product("Pico Plant")
+                .serial_number("1")
+                .max_packet_size_0(64)
+                .device_class(2) // from: https://www.usb.org/defined-class-codes
+                .build(),
+        );
+
+        USB_DEVICE.as_mut().unwrap().force_reset().ok();
+
+        let p = pac::Peripherals::steal();
+        // Enable interrupts for when a buffer is done, when the bus is reset,
+        // and when a setup packet is received
+        p.USBCTRL_REGS.inte.modify(|_, w| {
+            w.buff_status()
+                .set_bit()
+                .bus_reset()
+                .set_bit()
+                .setup_req()
+                .set_bit()
+                .trans_complete()
+                .set_bit()
+        });
+
+        // Enable the USB interrupt
+        pac::NVIC::unmask(hal::pac::Interrupt::USBCTRL_IRQ);
+    }
 
     if let Some(msg) = get_panic_message_bytes() {
         let textbox_style = TextBoxStyleBuilder::new()
@@ -145,12 +172,10 @@ fn main() -> ! {
             display.flush().unwrap();
         }
 
-        serial.write(msg).ok();
+        usb_write(message);
 
         #[allow(clippy::empty_loop)]
-        loop {
-            usb_dev.poll(&mut [&mut serial]);
-        }
+        loop {}
     }
 
     let mut led_pin = pins.gpio25.into_push_pull_output();
@@ -169,8 +194,6 @@ fn main() -> ! {
     let mut average_water = 0.0;
 
     loop {
-        while usb_dev.poll(&mut [&mut serial]) {}
-
         led_pin.set_low().unwrap();
 
         display.clear();
@@ -191,10 +214,16 @@ fn main() -> ! {
 
         measure_cycle += 1;
 
-        if measure_cycle > 5 {
+        if measure_cycle > 10 {
             data.rotate_left(1);
             *data.last_mut().unwrap() = average_water;
             measure_cycle = 0;
+
+            {
+                let mut text = String::<64>::new();
+                uwrite!(&mut text, "T: {}\r\n", uFmt_f32::Three(temp)).unwrap();
+                usb_write(&text);
+            }
         }
 
         for (x, t) in data.iter().enumerate() {
@@ -226,16 +255,42 @@ fn main() -> ! {
                 .unwrap();
         }
 
-        {
-            let mut text = String::<64>::new();
-            uwrite!(&mut text, "T: {}\r\n", uFmt_f32::Three(temp)).unwrap();
-            serial.write(text.as_bytes()).ok();
-        }
-
         led_pin.set_high().unwrap();
 
         if display_ok {
             display.flush().unwrap();
         }
+    }
+}
+
+fn usb_write(str: &str) {
+    cortex_m::interrupt::free(|_| unsafe {
+        let serial = USB_SERIAL.as_mut().unwrap();
+        serial.write(str.as_bytes()).ok();
+    });
+}
+
+#[allow(non_snake_case)]
+#[interrupt]
+unsafe fn USBCTRL_IRQ() {
+    let usb_dev = USB_DEVICE.as_mut().unwrap();
+    let serial = USB_SERIAL.as_mut().unwrap();
+
+    usb_dev.poll(&mut [serial]);
+
+    // Clear pending interrupt flags here.
+    let p = pac::Peripherals::steal();
+    let status = &p.USBCTRL_REGS.sie_status;
+    if status.read().ack_rec().bit_is_set() {
+        status.modify(|_r, w| w.ack_rec().set_bit());
+    }
+    if status.read().setup_rec().bit_is_set() {
+        status.modify(|_r, w| w.setup_rec().set_bit());
+    }
+    if status.read().trans_complete().bit_is_set() {
+        status.modify(|_r, w| w.trans_complete().set_bit());
+    }
+    if status.read().bus_reset().bit_is_set() {
+        status.modify(|_r, w| w.bus_reset().set_bit());
     }
 }

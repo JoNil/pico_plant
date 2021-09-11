@@ -475,7 +475,7 @@ source = "git+https://github.com/JoNil/rp2040-boot2-rs.git#cc9383dbafc7d62d6bd08
 [[package]]
 name = "rp2040-hal"
 version = "0.2.0"
-source = "git+https://github.com/rp-rs/rp-hal.git#8b1c9fc3e5d5f7160550661e7b0f0e21b49a7d35"
+source = "git+https://github.com/JoNil/rp-hal.git#63c337226c86082e5ae91f4bc00d937295350cc4"
 dependencies = [
  "cortex-m 0.7.3",
  "embedded-hal",
@@ -491,9 +491,10 @@ dependencies = [
 [[package]]
 name = "rp2040-pac"
 version = "0.1.4"
-source = "git+https://github.com/rp-rs/rp2040-pac?rev=0226d2c28e8dca03475d6783cbdf07f535859c23#0226d2c28e8dca03475d6783cbdf07f535859c23"
+source = "git+https://github.com/rp-rs/rp2040-pac?rev=80a8b9fed02db630c39c4492590a0808957ffe47#80a8b9fed02db630c39c4492590a0808957ffe47"
 dependencies = [
  "cortex-m 0.7.3",
+ "cortex-m-rt",
  "vcell",
 ]
 
