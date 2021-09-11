@@ -20,7 +20,7 @@ use embedded_text::{
 use embedded_time::rate::Extensions;
 use hal::{
     adc::Adc,
-    clocks::ClocksManager,
+    clocks::{init_clocks_and_plls, ClockSource, ClocksManager},
     gpio::{FunctionI2C, Pins},
     i2c::I2C,
     pac,
@@ -29,6 +29,9 @@ use hal::{
         setup_pll_blocking,
     },
     sio::Sio,
+    timer::Timer,
+    usb::UsbBus,
+    watchdog::Watchdog,
     xosc::setup_xosc_blocking,
 };
 use heapless::String;
@@ -40,47 +43,55 @@ use ssd1306::{
 };
 use ufmt::uwrite;
 use ufmt_float::uFmt_f32;
+use usb_device::{
+    class_prelude::UsbBusAllocator,
+    device::{UsbDeviceBuilder, UsbVidPid},
+};
+use usbd_serial::SerialPort;
 
 #[link_section = ".boot2"]
 #[used]
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
 
 const XOSC_HZ: u32 = 12_000_000_u32;
-const SYS_HZ: u32 = 125_000_000_u32;
 
 fn lerp(val1: f32, val2: f32, amount: f32) -> f32 {
-    return val1 + (val2 - val1) * amount;
+    val1 + (val2 - val1) * amount
 }
 
 #[entry]
 fn main() -> ! {
     let mut pac = pac::Peripherals::take().unwrap();
 
-    let mut clocks = ClocksManager::new(pac.CLOCKS);
+    let mut watchdog = Watchdog::new(pac.WATCHDOG);
 
-    let xosc = setup_xosc_blocking(pac.XOSC, XOSC_HZ.Hz()).ok().unwrap();
-
-    let pll_sys = setup_pll_blocking(
+    let clocks = init_clocks_and_plls(
+        XOSC_HZ,
+        pac.XOSC,
+        pac.CLOCKS,
         pac.PLL_SYS,
-        XOSC_HZ.Hz().into(),
-        PLL_SYS_125MHZ,
-        &mut clocks,
-        &mut pac.RESETS,
-    )
-    .ok()
-    .unwrap();
-
-    let pll_usb = setup_pll_blocking(
         pac.PLL_USB,
-        XOSC_HZ.Hz().into(),
-        PLL_USB_48MHZ,
-        &mut clocks,
         &mut pac.RESETS,
+        &mut watchdog,
     )
     .ok()
     .unwrap();
 
-    clocks.init_default(&xosc, &pll_sys, &pll_usb).ok().unwrap();
+    let usb_bus = UsbBusAllocator::new(UsbBus::new(
+        pac.USBCTRL_REGS,
+        pac.USBCTRL_DPRAM,
+        clocks.usb_clock,
+        true,
+        &mut pac.RESETS,
+    ));
+    let mut serial = SerialPort::new(&usb_bus);
+    let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x16c0, 0x27dd))
+        .manufacturer("JoNil")
+        .product("Pico Plant")
+        .serial_number("1")
+        .max_packet_size_0(64)
+        .device_class(2) // from: https://www.usb.org/defined-class-codes
+        .build();
 
     let sio = Sio::new(pac.SIO);
     let pins = Pins::new(
@@ -99,7 +110,7 @@ fn main() -> ! {
         scl_pin,
         400.kHz(),
         &mut pac.RESETS,
-        SYS_HZ.Hz(),
+        clocks.system_clock.get_freq(),
     );
 
     let mut display = Ssd1306::new(
@@ -141,9 +152,13 @@ fn main() -> ! {
     let mut water_sensor_pin = pins.gpio27.into_floating_input();
     let mut input_voltage_sensor_pin = pins.gpio26.into_floating_input();
 
-    display.init().unwrap();
-    display.clear();
-    display.flush().unwrap();
+    let display_ok = if display.init().is_ok() {
+        display.clear();
+        display.flush().unwrap();
+        true
+    } else {
+        false
+    };
 
     let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
 
@@ -155,6 +170,8 @@ fn main() -> ! {
     let mut average_water = 0.0;
 
     loop {
+        usb_dev.poll(&mut [&mut serial]);
+
         led_pin.set_low().unwrap();
 
         display.clear();
@@ -210,8 +227,16 @@ fn main() -> ! {
                 .unwrap();
         }
 
+        {
+            let mut text = String::<64>::new();
+            uwrite!(&mut text, "T: {}\r\n", uFmt_f32::Three(temp)).unwrap();
+            serial.write(text.as_bytes()).ok();
+        }
+
         led_pin.set_high().unwrap();
 
-        display.flush().unwrap();
+        if display_ok {
+            display.flush().unwrap();
+        }
     }
 }

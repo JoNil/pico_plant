@@ -13,11 +13,13 @@ embedded-text = "0.5"
 embedded-time = "0.12"
 heapless = { version = "0.7", features = ["ufmt-impl"] }
 panic-persist = "0.2"
-rp2040-boot2 = { git = "https://github.com/JoNil/rp2040-boot2-rs.git", branch = "main" }
-rp2040-hal = { path = "../rp-hal/rp2040-hal" }
+rp2040-boot2 = { git = "https://github.com/JoNil/rp2040-boot2-rs.git" }
+rp2040-hal = { git = "https://github.com/rp-rs/rp-hal.git" }
 ssd1306 = "0.7"
 ufmt = "0.1.0"
 ufmt_float = "0.1"
+usb-device="0.2"
+usbd-serial = "0.1"
 
 [[bin]]
 name = "pico_plant"
