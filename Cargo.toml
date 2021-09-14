@@ -21,6 +21,7 @@ rp2040-hal = { git = "https://github.com/JoNil/rp-hal.git", features = ["rt"], b
 ssd1306 = "0.7"
 usb-device="0.2"
 usbd-serial = "0.1"
+zerocopy = "0.6"
 
 [[bin]]
 name = "pico_plant"

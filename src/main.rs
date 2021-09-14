@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use core::{fmt, str};
+use core::{fmt, slice, str};
 use cortex_m_rt::entry;
 use embedded_graphics::{
     mono_font::{ascii::FONT_6X10, iso_8859_9::FONT_4X6, MonoTextStyle},
@@ -12,7 +12,7 @@ use embedded_graphics::{
     Drawable,
 };
 use embedded_hal::{adc::OneShot, digital::v2::OutputPin, spi::MODE_0};
-use embedded_sdmmc::{BlockDevice, SdMmcSpi};
+use embedded_sdmmc::{Block, BlockDevice, BlockIdx, SdMmcSpi};
 use embedded_text::{
     alignment::HorizontalAlignment,
     style::{HeightMode, TextBoxStyleBuilder},
@@ -42,6 +42,7 @@ use usb_device::{
     device::{UsbDevice, UsbDeviceBuilder, UsbVidPid},
 };
 use usbd_serial::SerialPort;
+use zerocopy::LayoutVerified;
 
 #[link_section = ".boot2"]
 #[used]
@@ -213,9 +214,12 @@ fn main() -> ! {
 
     let block_count = sd_mmc.num_blocks().unwrap();
 
-    let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
+    let mut block = Block::new();
+    sd_mmc
+        .read(slice::from_mut(&mut block), BlockIdx(0), "")
+        .unwrap();
 
-    let mut data: [f32; 128] = [0.0; 128];
+    let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
 
     let mut measure_cycle = 0;
 
@@ -244,8 +248,17 @@ fn main() -> ! {
         measure_cycle += 1;
 
         if measure_cycle > 10 {
-            data.rotate_left(1);
-            *data.last_mut().unwrap() = average_water;
+            {
+                let data =
+                    &mut LayoutVerified::<&mut [u8], [f32]>::new_slice(&mut block.contents[..])
+                        .unwrap()
+                        .into_mut_slice()[..128];
+                data.rotate_left(1);
+                *data.last_mut().unwrap() = average_water;
+            }
+
+            sd_mmc.write(slice::from_ref(&block), BlockIdx(0)).unwrap();
+
             measure_cycle = 0;
 
             {
@@ -255,9 +268,15 @@ fn main() -> ! {
             }
         }
 
-        for (x, t) in data.iter().enumerate() {
-            let y = (32.0 * t / 0.5) as u32;
-            display.set_pixel(x as u32, 32 - y, true);
+        {
+            let data = &LayoutVerified::<&[u8], [f32]>::new_slice(&block.contents[..])
+                .unwrap()
+                .into_slice()[..128];
+
+            for (x, t) in data.iter().enumerate() {
+                let y = (32.0 * t / 0.5) as u32;
+                display.set_pixel(x as u32, 32 - y, true);
+            }
         }
 
         {
