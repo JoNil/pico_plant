@@ -5,6 +5,7 @@ target = "thumbv6m-none-eabi"
 [target.'cfg(all(target_arch = "arm", target_os = "none"))']
 
 runner = "elf2uf2-rs -d -s"
+#runner = "C:/dev/elf2uf2-rs/target/release/elf2uf2-rs.exe -d -s"
 
 rustflags = [
     "-C", "link-arg=--nmagic",

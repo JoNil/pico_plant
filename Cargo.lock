@@ -82,6 +82,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
+name = "cfg-if"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+
+[[package]]
 name = "cortex-m"
 version = "0.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -193,6 +199,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "embedded-sdmmc"
+version = "0.3.0"
+source = "git+https://github.com/JoNil/embedded-sdmmc-rs.git#7d9543d30b0d67fe5c82326366d39aa1820b305f"
+dependencies = [
+ "byteorder",
+ "embedded-hal",
+ "log",
+]
+
+[[package]]
 name = "embedded-text"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -299,6 +315,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "69ddb889f9d0d08a67338271fa9b62996bc788c7796a5c18cf057420aaed5eaf"
 dependencies = [
  "either",
+]
+
+[[package]]
+name = "log"
+version = "0.4.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "51b9bbe6c47d51fc3e1a9b945965946b4c44142ab8792c50835a980d362c2710"
+dependencies = [
+ "cfg-if",
 ]
 
 [[package]]
@@ -430,6 +455,7 @@ dependencies = [
  "cortex-m-rt",
  "embedded-graphics",
  "embedded-hal",
+ "embedded-sdmmc",
  "embedded-text",
  "embedded-time",
  "heapless 0.7.5",
@@ -475,7 +501,7 @@ source = "git+https://github.com/JoNil/rp2040-boot2-rs.git#cc9383dbafc7d62d6bd08
 [[package]]
 name = "rp2040-hal"
 version = "0.2.0"
-source = "git+https://github.com/JoNil/rp-hal.git#63c337226c86082e5ae91f4bc00d937295350cc4"
+source = "git+https://github.com/JoNil/rp-hal.git?branch=dev-spi#0e069d5de29410d422ccf315408cde8bc3de66b0"
 dependencies = [
  "cortex-m 0.7.3",
  "embedded-hal",
@@ -490,8 +516,9 @@ dependencies = [
 
 [[package]]
 name = "rp2040-pac"
-version = "0.1.4"
-source = "git+https://github.com/rp-rs/rp2040-pac?rev=80a8b9fed02db630c39c4492590a0808957ffe47#80a8b9fed02db630c39c4492590a0808957ffe47"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b6e222c239e9f08d36faf5e2372b4eb0661b3535e3b28942db1e937a9d15f76"
 dependencies = [
  "cortex-m 0.7.3",
  "cortex-m-rt",

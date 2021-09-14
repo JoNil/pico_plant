@@ -9,12 +9,15 @@ cortex-m = "0.7"
 cortex-m-rt = "0.7"
 embedded-graphics = "0.7"
 embedded-hal = { version = "0.2", features=["unproven"] }
+embedded-sdmmc = { git = "https://github.com/JoNil/embedded-sdmmc-rs.git" }
+#embedded-sdmmc = { path = "../embedded-sdmmc-rs" }
 embedded-text = "0.5"
 embedded-time = "0.12"
 heapless = { version = "0.7", features = ["ufmt-impl"] }
 panic-persist = "0.2"
 rp2040-boot2 = { git = "https://github.com/JoNil/rp2040-boot2-rs.git" }
-rp2040-hal = { git = "https://github.com/JoNil/rp-hal.git", features = ["rt"] }
+rp2040-hal = { git = "https://github.com/JoNil/rp-hal.git", features = ["rt"], branch = "dev-spi" }
+#rp2040-hal = { path = "../rp-hal/rp2040-hal", features = ["rt"] }
 ssd1306 = "0.7"
 ufmt = "0.1.0"
 ufmt_float = "0.1"

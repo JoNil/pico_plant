@@ -4,14 +4,15 @@
 use core::str;
 use cortex_m_rt::entry;
 use embedded_graphics::{
-    mono_font::{ascii::FONT_6X10, MonoTextStyle},
+    mono_font::{ascii::FONT_6X10, iso_8859_9::FONT_4X6, MonoTextStyle},
     pixelcolor::BinaryColor,
     prelude::{Point, Size},
     primitives::Rectangle,
     text::{Alignment, Text},
     Drawable,
 };
-use embedded_hal::{adc::OneShot, digital::v2::OutputPin};
+use embedded_hal::{adc::OneShot, digital::v2::OutputPin, spi::MODE_0};
+use embedded_sdmmc::SdMmcSpi;
 use embedded_text::{
     alignment::HorizontalAlignment,
     style::{HeightMode, TextBoxStyleBuilder},
@@ -20,11 +21,12 @@ use embedded_text::{
 use embedded_time::rate::Extensions;
 use hal::{
     adc::Adc,
-    clocks::{init_clocks_and_plls, ClockSource},
-    gpio::{FunctionI2C, Pins},
+    clocks::{init_clocks_and_plls, Clock},
+    gpio::{FunctionI2C, FunctionSpi, Pins},
     i2c::I2C,
     pac::{self, interrupt},
     sio::Sio,
+    spi::Spi,
     usb::UsbBus,
     watchdog::Watchdog,
 };
@@ -84,7 +86,7 @@ fn main() -> ! {
     );
 
     let sda_pin = pins.gpio14.into_mode::<FunctionI2C>();
-    let scl_pin = pins.gpio19.into_mode::<FunctionI2C>();
+    let scl_pin = pins.gpio15.into_mode::<FunctionI2C>();
 
     let i2c = I2C::i2c1(
         pac.I2C1,
@@ -92,7 +94,7 @@ fn main() -> ! {
         scl_pin,
         400.kHz(),
         &mut pac.RESETS,
-        clocks.system_clock.get_freq(),
+        clocks.system_clock.freq(),
     );
 
     let mut display = Ssd1306::new(
@@ -109,8 +111,6 @@ fn main() -> ! {
     } else {
         false
     };
-
-    let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
 
     unsafe {
         USB_BUS = Some(UsbBusAllocator::new(UsbBus::new(
@@ -160,6 +160,7 @@ fn main() -> ! {
             .build();
 
         let bounds = Rectangle::new(Point::zero(), Size::new(128, 32));
+        let character_style = MonoTextStyle::new(&FONT_4X6, BinaryColor::On);
 
         let message = unsafe { str::from_utf8_unchecked(msg) };
 
@@ -185,6 +186,34 @@ fn main() -> ! {
 
     let mut water_sensor_pin = pins.gpio27.into_floating_input();
     let mut input_voltage_sensor_pin = pins.gpio26.into_floating_input();
+
+    let _ = pins.gpio10.into_mode::<FunctionSpi>();
+    let _ = pins.gpio11.into_mode::<FunctionSpi>();
+    let _ = pins.gpio12.into_mode::<FunctionSpi>();
+    let sd_cs = pins.gpio13.into_push_pull_output();
+
+    let sd_spi = Spi::<_, _, 8>::new(pac.SPI1).init(
+        &mut pac.RESETS,
+        clocks.peripheral_clock.freq(),
+        100_000u32.Hz(),
+        &MODE_0,
+    );
+
+    let mut sd_mmc = SdMmcSpi::new(sd_spi, sd_cs);
+    let res = sd_mmc.init();
+
+    if let Err(e) = res {
+        panic!("{:?}", e);
+    }
+
+    sd_mmc.spi().reinit(
+        &mut pac.RESETS,
+        clocks.peripheral_clock.freq(),
+        16_000_000u32.Hz(),
+        &MODE_0,
+    );
+
+    let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
 
     let mut data: [f32; 128] = [0.0; 128];
 
