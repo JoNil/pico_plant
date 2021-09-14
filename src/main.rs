@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use core::str;
+use core::{fmt, str};
 use cortex_m_rt::entry;
 use embedded_graphics::{
     mono_font::{ascii::FONT_6X10, iso_8859_9::FONT_4X6, MonoTextStyle},
@@ -12,7 +12,7 @@ use embedded_graphics::{
     Drawable,
 };
 use embedded_hal::{adc::OneShot, digital::v2::OutputPin, spi::MODE_0};
-use embedded_sdmmc::SdMmcSpi;
+use embedded_sdmmc::{BlockDevice, SdMmcSpi};
 use embedded_text::{
     alignment::HorizontalAlignment,
     style::{HeightMode, TextBoxStyleBuilder},
@@ -37,8 +37,6 @@ use ssd1306::{
     mode::DisplayConfig, rotation::DisplayRotation, size::DisplaySize128x32, I2CDisplayInterface,
     Ssd1306,
 };
-use ufmt::uwrite;
-use ufmt_float::uFmt_f32;
 use usb_device::{
     class_prelude::UsbBusAllocator,
     device::{UsbDevice, UsbDeviceBuilder, UsbVidPid},
@@ -213,6 +211,8 @@ fn main() -> ! {
         &MODE_0,
     );
 
+    let block_count = sd_mmc.num_blocks().unwrap();
+
     let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
 
     let mut data: [f32; 128] = [0.0; 128];
@@ -250,7 +250,7 @@ fn main() -> ! {
 
             {
                 let mut text = String::<64>::new();
-                uwrite!(&mut text, "T: {}\r\n", uFmt_f32::Three(temp)).unwrap();
+                fmt::write(&mut text, format_args!("T: {:.1}\r\n", temp)).unwrap();
                 usb_write(&text);
             }
         }
@@ -262,7 +262,7 @@ fn main() -> ! {
 
         {
             let mut text = String::<48>::new();
-            uwrite!(&mut text, "T: {}", uFmt_f32::One(temp)).unwrap();
+            fmt::write(&mut text, format_args!("T: {:.1}", temp)).unwrap();
 
             Text::with_alignment(&text, Point::new(0, 10), character_style, Alignment::Left)
                 .draw(&mut display)
@@ -271,11 +271,9 @@ fn main() -> ! {
 
         {
             let mut text = String::<48>::new();
-            uwrite!(
+            fmt::write(
                 &mut text,
-                "W: {}, V: {}",
-                uFmt_f32::Three(average_water),
-                uFmt_f32::Three(average_voltage)
+                format_args!("W: {:.3}, V: {:.3}", average_water, average_voltage),
             )
             .unwrap();
 
