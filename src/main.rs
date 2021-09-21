@@ -2,6 +2,7 @@
 #![no_main]
 
 use core::{fmt, slice, str};
+use cortex_m::delay::Delay;
 use cortex_m_rt::entry;
 use embedded_graphics::{
     mono_font::{ascii::FONT_6X10, iso_8859_9::FONT_4X6, MonoTextStyle},
@@ -61,6 +62,7 @@ fn lerp(val1: f32, val2: f32, amount: f32) -> f32 {
 #[entry]
 fn main() -> ! {
     let mut pac = pac::Peripherals::take().unwrap();
+    let core = pac::CorePeripherals::take().unwrap();
 
     let mut watchdog = Watchdog::new(pac.WATCHDOG);
 
@@ -134,20 +136,6 @@ fn main() -> ! {
 
         USB_DEVICE.as_mut().unwrap().force_reset().ok();
 
-        let p = pac::Peripherals::steal();
-        // Enable interrupts for when a buffer is done, when the bus is reset,
-        // and when a setup packet is received
-        p.USBCTRL_REGS.inte.modify(|_, w| {
-            w.buff_status()
-                .set_bit()
-                .bus_reset()
-                .set_bit()
-                .setup_req()
-                .set_bit()
-                .trans_complete()
-                .set_bit()
-        });
-
         // Enable the USB interrupt
         pac::NVIC::unmask(hal::pac::Interrupt::USBCTRL_IRQ);
     }
@@ -171,6 +159,8 @@ fn main() -> ! {
         if display_ok {
             display.flush().unwrap();
         }
+
+        Delay::new(core.SYST, clocks.system_clock.freq().0).delay_ms(1000);
 
         usb_write(message);
 
@@ -205,12 +195,9 @@ fn main() -> ! {
         panic!("{:?}", e);
     }
 
-    sd_mmc.spi().reinit(
-        &mut pac.RESETS,
-        clocks.peripheral_clock.freq(),
-        16_000_000u32.Hz(),
-        &MODE_0,
-    );
+    sd_mmc
+        .spi()
+        .set_baudrate(clocks.peripheral_clock.freq(), 16_000_000u32.Hz());
 
     let block_count = sd_mmc.num_blocks().unwrap();
 
@@ -323,20 +310,4 @@ unsafe fn USBCTRL_IRQ() {
     let serial = USB_SERIAL.as_mut().unwrap();
 
     usb_dev.poll(&mut [serial]);
-
-    // Clear pending interrupt flags here.
-    let p = pac::Peripherals::steal();
-    let status = &p.USBCTRL_REGS.sie_status;
-    if status.read().ack_rec().bit_is_set() {
-        status.modify(|_r, w| w.ack_rec().set_bit());
-    }
-    if status.read().setup_rec().bit_is_set() {
-        status.modify(|_r, w| w.setup_rec().set_bit());
-    }
-    if status.read().trans_complete().bit_is_set() {
-        status.modify(|_r, w| w.trans_complete().set_bit());
-    }
-    if status.read().bus_reset().bit_is_set() {
-        status.modify(|_r, w| w.bus_reset().set_bit());
-    }
 }
