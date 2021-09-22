@@ -16,7 +16,7 @@ embedded-time = "0.12"
 heapless = { version = "0.7", features = ["ufmt-impl"] }
 panic-persist = "0.3"
 rp2040-boot2 = { git = "https://github.com/JoNil/rp2040-boot2-rs.git" }
-rp2040-hal = { git = "https://github.com/JoNil/rp-hal.git", features = ["rt"], branch = "dev-spi_reset" }
+rp2040-hal = { git = "https://github.com/rp-rs/rp-hal.git", features = ["rt"] }
 #rp2040-hal = { path = "../rp-hal/rp2040-hal", features = ["rt"] }
 ssd1306 = "0.7"
 usb-device="0.2"

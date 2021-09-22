@@ -293,9 +293,9 @@ dependencies = [
 
 [[package]]
 name = "heapless"
-version = "0.7.6"
+version = "0.7.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14db22a3fec113074342010bb85a75ba17789244649af8a3178594e0dc97c381"
+checksum = "fe65ef062f1af5b1b189842b0bc45bd671c38e1d22c6aa22e6ada03d01026d53"
 dependencies = [
  "atomic-polyfill",
  "hash32 0.2.1",
@@ -484,7 +484,7 @@ dependencies = [
  "embedded-sdmmc",
  "embedded-text",
  "embedded-time",
- "heapless 0.7.6",
+ "heapless 0.7.7",
  "panic-persist",
  "rp2040-boot2",
  "rp2040-hal",
@@ -529,8 +529,8 @@ source = "git+https://github.com/JoNil/rp2040-boot2-rs.git#cc9383dbafc7d62d6bd08
 
 [[package]]
 name = "rp2040-hal"
-version = "0.2.0"
-source = "git+https://github.com/JoNil/rp-hal.git?branch=dev-spi_reset#ffc4d7d003c02d7ee46145133fac05e6be1046da"
+version = "0.3.0"
+source = "git+https://github.com/rp-rs/rp-hal.git#b0c15ccc77395ca088917541b8e7358b5e9b62b8"
 dependencies = [
  "cortex-m",
  "embedded-hal",
